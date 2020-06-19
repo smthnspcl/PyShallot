@@ -9,6 +9,7 @@ from base64 import b64encode, b32encode
 from pyasn1.codec.der import encoder
 from queue import Empty as QueueEmpty
 from pyasn1.type import univ, namedtype
+from argparse import ArgumentParser
 
 # Constants stolen from the original shallot ####
 EMIN = 0x10001
@@ -154,14 +155,19 @@ def kill_procs(processes, results, trials, kill):
 
 
 # Main thread
-def main(pattern):
+def main():
+    ap = ArgumentParser()
+    ap.add_argument("-p", "--pattern", type=str, help="pattern to search for")
+    ap.add_argument("-t", "--threads", type=int, default=multiprocessing.cpu_count(), help="processes to start")
+    a = ap.parse_args()
+
     results = multiprocessing.Queue()
     trials = multiprocessing.Queue()
     kill = multiprocessing.Event()
     processes = []
-    for i in range(multiprocessing.cpu_count()):
-        processes.append(Worker(pattern, results, trials, kill))
-        processes[-1].start()
+    for i in range(a.threads):
+        processes.append(Worker(a.pattern, results, trials, kill))
+        processes[i].start()
     try:
         while True:
             try:
@@ -184,7 +190,4 @@ def main(pattern):
 
 
 if __name__ == '__main__':
-    try:
-        main(sys.argv[1])
-    except KeyboardInterrupt:
-        sys.exit(1)
+    main()
