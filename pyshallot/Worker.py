@@ -24,14 +24,6 @@ def random(bytez):
     return gmpy2.mpz(reduce(lambda a, b: (a << 8) | ord(chr(b)), os.urandom(bytez), 0))
 
 
-def find_prime(bytez=128):
-    """Checks random numbers for primality"""
-    p = random(bytez) | 1
-    while not good_prime(p):
-        p = random(bytez) | 1
-    return p
-
-
 def good_pair(p, q):
     """Returns p*q if p and q are a good pair, else 0."""
     n = p * q
@@ -63,12 +55,18 @@ class Worker(Process):
         for pattern in self.patterns:
             self.regexes.append(re.compile(pattern))
 
-    @staticmethod
-    def find_good_pair():
+    def find_prime(self, bytez=128):
+        """Checks random numbers for primality"""
+        p = random(bytez) | 1
+        while not good_prime(p) and not self.kill.is_set():
+            p = random(bytez) | 1
+        return p
+
+    def find_good_pair(self):
         r = None
-        while not r:
-            p = find_prime()
-            q = find_prime()
+        while not r and not self.kill.is_set():
+            p = self.find_prime()
+            q = self.find_prime()
             if q > p:
                 p, q = q, p
             n = good_pair(p, q)
@@ -84,7 +82,7 @@ class Worker(Process):
 
     def find(self):
         i = 0
-        while True:
+        while not self.kill.is_set():
             n, p, q = self.find_good_pair()
             t = n - (p + q - 1)
             e = EMIN
@@ -97,12 +95,11 @@ class Worker(Process):
                 if self.matches_regex(o.decode('utf-8')) and gmpy2.gcd(e, t) == 1:
                     d = gmpy2.invert(e, t)
                     p = private_key(n, e, d, p, q)
+                    self.results.put(o + p)
+                    self.trials.put(i)
                     if self.one:
                         self.kill.set()
-                        return o, p
-                    else:
-                        self.results.put(o + p)
-                        self.trials.put(i)
+
                 e += 2
 
     def run(self):

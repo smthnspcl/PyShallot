@@ -40,7 +40,7 @@ class Manager(object):
             self.processes.append(Worker(self.patterns, self.results, self.trials, self.kill))
             self.processes[i].start()
 
-        return self.run()
+        self.run()
 
     def run(self):
         while self.do_run:
@@ -54,13 +54,12 @@ class Manager(object):
                 if l > self.prev_found:
                     print("Found: ")
                     for i in range(l - self.prev_found):
-                        print("\t", l[:22])
+                        print("\t", self.found[i][:22])
                 self.prev_found = len(self.found)
             except QueueEmpty:
                 pass
             else:
                 break
-        return self.found
 
     def stop(self):
         self.do_run = False

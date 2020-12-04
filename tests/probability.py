@@ -38,16 +38,19 @@ i = 0
 bar = tqdm(total=m)
 
 
+def new_worker(pattern: str) -> Worker:
+    return Worker([pattern], one=True)
+
+
 def timeit(pattern: str) -> float:
     s = time()
-    r = new_worker(pattern).find()[0][:22]
+    r = new_worker(pattern)
+    r.start()
+    while r.results.empty():
+        pass
     bar.set_description("%s" % r)
     r = time() - s
     return r
-
-
-def new_worker(pattern: str) -> Worker:
-    return Worker([pattern], one=True)
 
 
 for l in LENGTHS:
